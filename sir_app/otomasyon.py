@@ -1,102 +1,117 @@
-# Bu betik, belirtilen uygulamaları başlatır ve pencereleri düzenler.
-
 import subprocess
 import time
-import os
+import pygetwindow as gw
 import sys
-import threading
 
-# pygetwindow kütüphanesi pencere yönetimi için kullanılır.
-try:
-    import pygetwindow as gw
-except ImportError:
-    print("pygetwindow kütüphanesi yükleniyor...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "pygetwindow"])
-    import pygetwindow as gw
+# Dosya yolları
+vs_code_path = r'C:\Users\user\AppData\Local\Programs\Microsoft VS Code\Code.exe'
+github_desktop_path = r'C:\Users\user\AppData\Local\GitHubDesktop\GithubDesktop.exe'
+spotify_command = 'start spotify:'
+chrome_path = r'C:\Program Files\Google\Chrome\Application\chrome.exe' # Default path, adjust if needed
 
-def run_in_background(target):
-    """Bir fonksiyonu ayrı bir iş parçacığında (thread) çalıştırır."""
-    thread = threading.Thread(target=target)
-    thread.daemon = True
-    thread.start()
+# Uygulama adları ve pencere başlıkları
+apps_to_open = [
+    {'name': 'VS Code', 'path': vs_code_path, 'title_hints': ['Visual Studio Code', 'Visual Studio Code - Insiders']},
+    {'name': 'GitHub Desktop', 'path': github_desktop_path, 'title_hints': ['GitHub Desktop']},
+    {'name': 'Spotify', 'path': spotify_command, 'title_hints': ['Spotify']},
+    {'name': 'Gemini', 'path': chrome_path, 'args': ['https://gemini.google.com/u/1/app?pli=1'], 'title_hints': ['Gemini - Google Chrome', 'Gemini - Brave', 'Gemini - Firefox', 'Yeni Sekme']},
+]
 
-def get_window_by_title_with_retries(titles, max_retries=10, delay=1):
-    """Pencereyi bulana kadar tekrar dener."""
-    for i in range(max_retries):
-        for title in titles:
-            try:
-                window = gw.getWindowsWithTitle(title)
-                if window:
-                    print(f"Pencere bulundu: {window[0].title}")
-                    return window[0]
-            except Exception as e:
-                print(f"Hata oluştu: {e}")
-        print(f"Pencere bulunamadı, {i+1}/{max_retries} tekrar deneniyor...")
-        time.sleep(delay)
-    print(f"Pencere {titles} başlıklarından herhangi biriyle bulunamadı. Lütfen pencere adını kontrol edin.")
-    return None
-
-def start_and_position_apps():
+def open_applications():
     """
-    Uygulamaları başlatır ve pencereleri ekranın ızgarasına göre yerleştirir.
+    Belirtilen uygulamaları açar.
+    """
+    for app in apps_to_open:
+        try:
+            if app['name'] == 'Spotify':
+                # Spotify için özel komut
+                subprocess.Popen(f'start {app["path"]}', shell=True)
+            elif 'args' in app:
+                # Argümanlı uygulamalar için
+                command = [app['path']] + app['args']
+                subprocess.Popen(command, shell=True)
+            else:
+                # Diğer uygulamalar
+                subprocess.Popen(app['path'])
+            print(f"{app['name']} başlatıldı.")
+            time.sleep(2) # Uygulamaların açılmasına izin vermek için bekleme
+        except FileNotFoundError:
+            print(f"Hata: {app['name']} bulunamadı. Lütfen dosya yolunu kontrol edin: {app['path']}")
+        except Exception as e:
+            print(f"Hata: {app['name']} başlatılırken bir sorun oluştu: {e}")
+
+def organize_windows():
+    """
+    Açık pencereleri bulur ve ekranı 4 eşit parçaya böler.
     """
     try:
-        # Ekran boyutlarını alın
-        screen_width = gw.getScreenSize()[0]
-        screen_height = gw.getScreenSize()[1]
-        half_width = screen_width // 2
-        half_height = screen_height // 2
+        screen_width = gw.get_monitors()[0].width
+        screen_height = gw.get_monitors()[0].height
+    except IndexError:
+        print("Ekran bilgileri alınamadı. Pencere düzenlemesi atlanıyor.")
+        return
 
-        # Uygulamaları başlat
-        # subprocess.Popen() komutu, programları arka planda çalıştırır.
-        print("Uygulamalar başlatılıyor...")
-        subprocess.Popen(['C:\\Users\\user\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe'])
-        subprocess.Popen(['C:\\Users\\user\\AppData\\Local\\GitHubDesktop\\GitHubDesktop.exe'])
-        subprocess.Popen(['C:\\Users\\user\\AppData\\Local\\Microsoft\\WindowsApps\\Spotify.exe'])
-        subprocess.Popen(['msedge', 'https://gemini.google.com/u/1/app?pli=1'])
+    # Ekranı 4 eşit parçaya bölme
+    quarter_width = screen_width // 2
+    quarter_height = screen_height // 2
 
-        # Programların açılması için bekleme süresi
-        time.sleep(5)
+    window_positions = {
+        'sol_ust': (0, 0, quarter_width, quarter_height),
+        'sag_ust': (quarter_width, 0, quarter_width, quarter_height),
+        'sol_alt': (0, quarter_height, quarter_width, quarter_height),
+        'sag_alt': (quarter_width, quarter_height, quarter_width, quarter_height),
+    }
 
-        # Pencere başlıkları (Türkçe ve İngilizce adlar)
-        window_titles = {
-            'vs_code': ['Visual Studio Code', 'Visual Studio Code (Yönetici)'],
-            'github': ['GitHub Desktop', 'GitHub Desktop (Yönetici)'],
-            'spotify': ['Spotify', 'Spotify - Ana Sayfa'],
-            'gemini': ['Gemini - Microsoft Edge']
-        }
+    # Belirtilen pencere başlıklarını bulma ve yerleştirme
+    app_windows = {}
+    attempts = 0
+    max_attempts = 15
 
-        # Pencereleri bul ve konumlandır
-        print("Pencereler konumlandırılıyor...")
+    while len(app_windows) < 4 and attempts < max_attempts:
+        open_windows = gw.getAllWindows()
+        for window in open_windows:
+            if window.title.strip() == '':
+                continue
+            for app in apps_to_open:
+                for hint in app['title_hints']:
+                    if hint in window.title and app['name'] not in app_windows:
+                        app_windows[app['name']] = window
+                        print(f"'{app['name']}' penceresi bulundu: {window.title}")
+                        break
+        time.sleep(1) # Pencerelerin tam olarak yüklenmesi için bekleme
+        attempts += 1
 
-        # Sol üstte: Gemini
-        gemini_window = get_window_by_title_with_retries(window_titles['gemini'])
-        if gemini_window:
-            gemini_window.resizeTo(half_width, half_height)
-            gemini_window.moveTo(0, 0)
+    # Pencereleri konumlandırma
+    if 'Gemini' in app_windows:
+        win = app_windows['Gemini']
+        if not win.isActive: win.activate()
+        win.resizeTo(window_positions['sol_ust'][2], window_positions['sol_ust'][3])
+        win.moveTo(window_positions['sol_ust'][0], window_positions['sol_ust'][1])
 
-        # Sağ üstte: VS Code
-        vs_code_window = get_window_by_title_with_retries(window_titles['vs_code'])
-        if vs_code_window:
-            vs_code_window.resizeTo(half_width, half_height)
-            vs_code_window.moveTo(half_width, 0)
+    if 'VS Code' in app_windows:
+        win = app_windows['VS Code']
+        if not win.isActive: win.activate()
+        win.resizeTo(window_positions['sag_ust'][2], window_positions['sag_ust'][3])
+        win.moveTo(window_positions['sag_ust'][0], window_positions['sag_ust'][1])
 
-        # Sol altta: Github Desktop
-        github_window = get_window_by_title_with_retries(window_titles['github'])
-        if github_window:
-            github_window.resizeTo(half_width, half_height)
-            github_window.moveTo(0, half_height)
+    if 'GitHub Desktop' in app_windows:
+        win = app_windows['GitHub Desktop']
+        if not win.isActive: win.activate()
+        win.resizeTo(window_positions['sol_alt'][2], window_positions['sol_alt'][3])
+        win.moveTo(window_positions['sol_alt'][0], window_positions['sol_alt'][1])
 
-        # Sağ altta: Spotify
-        spotify_window = get_window_by_title_with_retries(window_titles['spotify'])
-        if spotify_window:
-            spotify_window.resizeTo(half_width, half_height)
-            spotify_window.moveTo(half_width, half_height)
+    if 'Spotify' in app_windows:
+        win = app_windows['Spotify']
+        if not win.isActive: win.activate()
+        win.resizeTo(window_positions['sag_alt'][2], window_positions['sag_alt'][3])
+        win.moveTo(window_positions['sag_alt'][0], window_positions['sag_alt'][1])
 
-        print("Otomasyon tamamlandı!")
-
-    except Exception as e:
-        print(f"Bir hata oluştu: {e}")
+    print("Pencereler düzenlendi.")
 
 if __name__ == '__main__':
-    run_in_background(start_and_position_apps)
+    print("Otomasyon başladı...")
+    open_applications()
+    time.sleep(5)  # Uygulamaların tamamen açılması için bekleme
+    organize_windows()
+    print("Otomasyon tamamlandı.")
+    sys.stdout.flush()
