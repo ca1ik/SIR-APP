@@ -1,5 +1,5 @@
 # Flask'tan gerekli modülleri içe aktarır
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, request
 # subprocess, işletim sistemi komutlarını çalıştırmak için kullanılır
 import subprocess
 # threading, arka plan görevlerini ana programı engellemeden çalıştırmak için kullanılır
@@ -10,48 +10,40 @@ import os
 app = Flask(__name__)
 
 # Arka planda çalışacak bir fonksiyon
-def run_otomasyon():
-    # otomasyon.py dosyasını çalıştırır.
+def run_otomasyon(video_path):
+    """
+    Önce videoyu oynatır, ardından otomasyon betiğini başlatır.
+    """
     try:
+        # Önce videoyu oynat
+        # start komutu video oynatıcıyı varsayılan olarak başlatır
+        subprocess.Popen(['start', '', video_path], shell=True)
+        print(f"Video başlatıldı: {video_path}")
+        
+        # Ardından otomasyonu başlat
         script_dir = os.path.dirname(os.path.abspath(__file__))
         otomasyon_path = os.path.join(script_dir, "otomasyon.py")
         subprocess.Popen([sys.executable, otomasyon_path])
         print("Otomasyon betiği başlatıldı.")
     except Exception as e:
-        print(f"Otomasyon betiğini başlatırken hata oluştu: {e}")
+        print(f"Hata: Otomasyon veya video başlatılırken bir sorun oluştu: {e}")
 
-# Arka planda müzik çalma fonksiyonu
-def run_music(music_file):
-    try:
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        music_path = os.path.join(script_dir, music_file)
-        # Windows'ta ses dosyasını başlatmak için `start` komutunu kullanın.
-        subprocess.Popen(['start', music_path], shell=True)
-        print(f"{music_file} dosyası başlatıldı.")
-    except Exception as e:
-        print(f"Müzik dosyasını başlatırken hata oluştu: {e}")
+# '/start_automation' URL'si için bir POST isteği dinler
+@app.route('/start_automation', methods=['POST'])
+def start_automation():
+    """
+    İstemciden gelen video yolunu alır ve otomasyonu başlatır.
+    """
+    data = request.get_json()
+    video_path = data.get('video_path')
 
-# '/baslat' URL'si için bir POST isteği dinler
-@app.route('/baslat', methods=['POST'])
-def baslat():
+    if not video_path:
+        return jsonify({"error": "Video yolu belirtilmedi."}), 400
+
     # İsteği alır almaz otomasyonu ayrı bir iş parçacığında çalıştırır.
-    thread = threading.Thread(target=run_otomasyon)
+    thread = threading.Thread(target=run_otomasyon, args=(video_path,))
     thread.start()
     return jsonify({"status": "Otomasyon başlatılıyor..."}), 200
-
-# '/play_music/<language>' URL'si için bir POST isteği dinler
-@app.route('/play_music/<language>', methods=['POST'])
-def play_music(language):
-    if language == 'tr':
-        music_file = 'wakeuptr.mp3'
-    else:
-        music_file = 'wakeup.mp3'
-    
-    # Müziği ayrı bir iş parçacığında çalıştırır
-    thread = threading.Thread(target=run_music, args=(music_file,))
-    thread.start()
-    
-    return jsonify({"status": f"{music_file} çalınıyor..."}), 200
 
 # Ana fonksiyon
 if __name__ == '__main__':
