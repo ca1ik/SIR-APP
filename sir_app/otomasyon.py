@@ -19,53 +19,52 @@ apps_to_open = [
 
 def open_applications():
     """
-    Belirtilen uygulamaları açar.
+    Opens the specified applications in separate processes.
     """
+    processes = []
     for app in apps_to_open:
         try:
             if app['name'] == 'Spotify':
-                # Spotify için özel komut
-                subprocess.Popen(f'start {app["path"]}', shell=True)
+                proc = subprocess.Popen(f'start {app["path"]}', shell=True)
             elif 'args' in app:
-                # Argümanlı uygulamalar için
                 command = [app['path']] + app['args']
-                subprocess.Popen(command, shell=True)
+                proc = subprocess.Popen(command, shell=True)
             else:
-                # Diğer uygulamalar
-                subprocess.Popen(app['path'])
-            print(f"{app['name']} başlatıldı.")
-            time.sleep(2) # Uygulamaların açılmasına izin vermek için bekleme
+                proc = subprocess.Popen(app['path'])
+            processes.append(proc)
+            print(f"{app['name']} starting...")
         except FileNotFoundError:
-            print(f"Hata: {app['name']} bulunamadı. Lütfen dosya yolunu kontrol edin: {app['path']}")
+            print(f"Error: {app['name']} not found. Please check the file path: {app['path']}")
         except Exception as e:
-            print(f"Hata: {app['name']} başlatılırken bir sorun oluştu: {e}")
+            print(f"Error: An issue occurred while launching {app['name']}: {e}")
 
 def organize_windows():
     """
-    Açık pencereleri bulur ve ekranı 4 eşit parçaya böler.
+    Finds open windows and arranges them in a four-quadrant grid.
     """
     try:
         screen_width = gw.get_monitors()[0].width
         screen_height = gw.get_monitors()[0].height
     except IndexError:
-        print("Ekran bilgileri alınamadı. Pencere düzenlemesi atlanıyor.")
+        print("Screen info could not be obtained. Window arrangement skipped.")
         return
 
-    # Ekranı 4 eşit parçaya bölme
+    # Split the screen into 4 equal quadrants
     quarter_width = screen_width // 2
     quarter_height = screen_height // 2
 
+    # Define window positions based on the desired layout
     window_positions = {
-        'sol_ust': (0, 0, quarter_width, quarter_height),
-        'sag_ust': (quarter_width, 0, quarter_width, quarter_height),
-        'sol_alt': (0, quarter_height, quarter_width, quarter_height),
-        'sag_alt': (quarter_width, quarter_height, quarter_width, quarter_height),
+        'Gemini': (0, 0, quarter_width, quarter_height),           # Top-Left
+        'VS Code': (quarter_width, 0, quarter_width, quarter_height),     # Top-Right
+        'GitHub Desktop': (0, quarter_height, quarter_width, quarter_height), # Bottom-Left
+        'Spotify': (quarter_width, quarter_height, quarter_width, quarter_height), # Bottom-Right
     }
 
-    # Belirtilen pencere başlıklarını bulma ve yerleştirme
+    # Wait for the windows to be available
     app_windows = {}
     attempts = 0
-    max_attempts = 15
+    max_attempts = 30 # Artırılmış deneme sayısı
 
     while len(app_windows) < 4 and attempts < max_attempts:
         open_windows = gw.getAllWindows()
@@ -73,45 +72,37 @@ def organize_windows():
             if window.title.strip() == '':
                 continue
             for app in apps_to_open:
-                for hint in app['title_hints']:
-                    if hint in window.title and app['name'] not in app_windows:
-                        app_windows[app['name']] = window
-                        print(f"'{app['name']}' penceresi bulundu: {window.title}")
-                        break
-        time.sleep(1) # Pencerelerin tam olarak yüklenmesi için bekleme
+                if app['name'] not in app_windows:
+                    for hint in app['title_hints']:
+                        if hint.lower() in window.title.lower():
+                            app_windows[app['name']] = window
+                            print(f"Window found for '{app['name']}': {window.title}")
+                            break
+        time.sleep(1) # Wait for windows to load completely
         attempts += 1
-
-    # Pencereleri konumlandırma
-    if 'Gemini' in app_windows:
-        win = app_windows['Gemini']
-        if not win.isActive: win.activate()
-        win.resizeTo(window_positions['sol_ust'][2], window_positions['sol_ust'][3])
-        win.moveTo(window_positions['sol_ust'][0], window_positions['sol_ust'][1])
-
-    if 'VS Code' in app_windows:
-        win = app_windows['VS Code']
-        if not win.isActive: win.activate()
-        win.resizeTo(window_positions['sag_ust'][2], window_positions['sag_ust'][3])
-        win.moveTo(window_positions['sag_ust'][0], window_positions['sag_ust'][1])
-
-    if 'GitHub Desktop' in app_windows:
-        win = app_windows['GitHub Desktop']
-        if not win.isActive: win.activate()
-        win.resizeTo(window_positions['sol_alt'][2], window_positions['sol_alt'][3])
-        win.moveTo(window_positions['sol_alt'][0], window_positions['sol_alt'][1])
-
-    if 'Spotify' in app_windows:
-        win = app_windows['Spotify']
-        if not win.isActive: win.activate()
-        win.resizeTo(window_positions['sag_alt'][2], window_positions['sag_alt'][3])
-        win.moveTo(window_positions['sag_alt'][0], window_positions['sag_alt'][1])
-
-    print("Pencereler düzenlendi.")
+    
+    if len(app_windows) < 4:
+        print(f"Warning: Could not find all application windows. Found {len(app_windows)} out of 4.")
+        
+    # Resize and move the windows to their designated positions
+    for app_name, pos in window_positions.items():
+        if app_name in app_windows:
+            win = app_windows[app_name]
+            try:
+                win.maximize() # Pencerenin boyutlarını sıfırlamak için tam ekran yapın
+                time.sleep(0.5)
+                win.restore()  # Eski boyutlarına dönün
+                win.resizeTo(pos[2], pos[3])
+                win.moveTo(pos[0], pos[1])
+            except gw.PyGetWindowException as e:
+                print(f"Error arranging window '{app_name}': {e}")
+                
+    print("Windows arranged.")
 
 if __name__ == '__main__':
-    print("Otomasyon başladı...")
+    print("Automation started...")
     open_applications()
-    time.sleep(5)  # Uygulamaların tamamen açılması için bekleme
+    time.sleep(10)  # Uygulamaların tamamen açılması için bekleme
     organize_windows()
-    print("Otomasyon tamamlandı.")
+    print("Automation completed.")
     sys.stdout.flush()
