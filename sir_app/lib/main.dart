@@ -1,125 +1,203 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter/services.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const OtomasyonUygulamasi());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class OtomasyonUygulamasi extends StatelessWidget {
+  const OtomasyonUygulamasi({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Sistem Otomasyonu',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+        brightness: Brightness.dark,
+        primarySwatch: Colors.blueGrey,
+        scaffoldBackgroundColor: const Color(0xFF121212), // Koyu arka plan
+        cardColor: const Color(0xFF1E1E1E), // Koyu kart rengi
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(color: Colors.white70),
+          bodyMedium: TextStyle(color: Colors.white70),
+          titleLarge: TextStyle(
+              color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+          titleMedium: TextStyle(
+              color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            foregroundColor: Colors.white,
+            backgroundColor: Colors.blueGrey,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+            textStyle:
+                const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            shadowColor: Colors.black.withOpacity(0.5),
+            elevation: 10,
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xFF2C2C2C),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          hintStyle: const TextStyle(color: Colors.white54),
+        ),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const OtomasyonAnasayfasi(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class OtomasyonAnasayfasi extends StatefulWidget {
+  const OtomasyonAnasayfasi({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<OtomasyonAnasayfasi> createState() => _OtomasyonAnasayfasiState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _OtomasyonAnasayfasiState extends State<OtomasyonAnasayfasi> {
+  final TextEditingController _sifreController = TextEditingController();
+  final String _dogruSifre = 'forfuture';
+  bool _otomasyonCalisiyor = false;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+  @override
+  void initState() {
+    super.initState();
+    // Enter tuşuyla butona basma işlevi
+    HardwareKeyboard.instance.addHandler((KeyEvent event) {
+      if (event is KeyDownEvent &&
+          event.logicalKey == LogicalKeyboardKey.enter) {
+        if (!_otomasyonCalisiyor) {
+          _gosterSifrePenceresi(context);
+        }
+        return true;
+      }
+      return false;
     });
+  }
+
+  void _gosterSifrePenceresi(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          title:
+              const Text('Şifre Girin', style: TextStyle(color: Colors.white)),
+          content: TextField(
+            controller: _sifreController,
+            obscureText: true,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Şifrenizi girin',
+            ),
+            onSubmitted: (_) {
+              _baslatOtomasyon();
+              Navigator.of(context).pop();
+            },
+          ),
+          actions: [
+            TextButton(
+              child:
+                  const Text('İptal', style: TextStyle(color: Colors.white70)),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              onPressed: () {
+                _baslatOtomasyon();
+                Navigator.of(context).pop();
+              },
+              child: const Text('Onayla'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _baslatOtomasyon() async {
+    if (_sifreController.text == _dogruSifre) {
+      setState(() {
+        _otomasyonCalisiyor = true;
+      });
+
+      const url = 'http://127.0.0.1:5000/baslat';
+      try {
+        final response = await http.post(Uri.parse(url), body: jsonEncode({}));
+        if (response.statusCode == 200) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Otomasyon başlatıldı!'),
+                backgroundColor: Colors.green),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(
+                    'Hata: ${response.statusCode} - ${response.reasonPhrase}'),
+                backgroundColor: Colors.red),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text('Bağlantı hatası: Sunucu çalışmıyor olabilir. Hata: $e'),
+              backgroundColor: Colors.red),
+        );
+      } finally {
+        setState(() {
+          _otomasyonCalisiyor = false;
+        });
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Hatalı şifre!'), backgroundColor: Colors.red),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
+          children: [
             const Text(
-              'You have pushed the button this many times:',
+              'Sistem Otomasyon Aracı',
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
+            const SizedBox(height: 50),
+            _otomasyonCalisiyor
+                ? const Column(
+                    children: [
+                      CircularProgressIndicator(color: Colors.blueGrey),
+                      SizedBox(height: 20),
+                      Text('Otomasyon başlatılıyor...',
+                          style: TextStyle(fontSize: 16)),
+                    ],
+                  )
+                : ElevatedButton(
+                    onPressed: () {
+                      _gosterSifrePenceresi(context);
+                    },
+                    child: const Text('Sistemi Başlat'),
+                  ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
