@@ -24,11 +24,13 @@ def get_work_area():
 
 # --- DEĞİŞTİRİLECEK ALANLAR ---
 # Lütfen bu yolların sisteminizde doğru olduğundan emin olun.
+
 vs_code_path = r'C:\Users\user\AppData\Local\Programs\Microsoft VS Code\Code.exe'
 github_desktop_path = r'C:\Users\user\AppData\Local\GitHubDesktop\GithubDesktop.exe'
 chrome_path = r'C:\Program Files\Google\Chrome\Application\chrome.exe'
 
 # --- UYGULAMA BİLGİLERİ ---
+
 apps_to_open = [
     {'name': 'VS Code', 'path': vs_code_path, 'args': [], 'title_hints': ['Visual Studio Code']},
     {'name': 'GitHub Desktop', 'path': github_desktop_path, 'args': [], 'title_hints': ['GitHub Desktop']},
@@ -44,8 +46,10 @@ def open_applications():
     for app in apps_to_open:
         try:
             if app['name'] == 'Spotify':
+
                 subprocess.Popen(f'start {app["path"]}', shell=True)
             else:
+
                 command = [app['path']] + app['args']
                 subprocess.Popen(command)
             print(f"-> {app['name']} başlatıldı.")
@@ -71,18 +75,20 @@ def organize_windows_dynamically():
     # Boşluk kalmaması için piksel hassasiyetinde hesaplama
     half_width = work_width // 2
     half_height = work_height // 2
-    right_width = work_width - half_width  # Kalan pikselleri sağ tarafa ekle
+    right_width = work_width - half_width   # Kalan pikselleri sağ tarafa ekle
     bottom_height = work_height - half_height # Kalan pikselleri alt tarafa ekle
 
     # Pencere konumları ve boyutları
     positions_and_sizes = {
-        'Gemini':          {'pos': (left, top), 'size': (half_width, half_height)},
-        'VS Code':          {'pos': (left + half_width, top), 'size': (right_width, half_height)},
+        'Gemini':         {'pos': (left, top), 'size': (half_width, half_height)},
+        'VS Code':        {'pos': (left + half_width, top), 'size': (right_width, half_height)},
         'GitHub Desktop': {'pos': (left, top + half_height), 'size': (half_width, bottom_height)},
-        'Spotify':          {'pos': (left + half_width, top + half_height), 'size': (right_width, bottom_height)},
+        'Spotify':        {'pos': (left + half_width, top + half_height), 'size': (right_width, bottom_height)},
+
     }
 
     arranged_windows = set()
+
     attempts = 0
     max_attempts = 40  # 40 saniye boyunca pencereleri ara
 
@@ -124,7 +130,6 @@ def organize_windows_dynamically():
     
     print("\n")
 
-
 if __name__ == '__main__':
     print("Otomasyon Başladı...")
     open_applications()
@@ -132,7 +137,10 @@ if __name__ == '__main__':
     # Sabit bekleme kaldırıldı, organize_windows_dynamically fonksiyonu
     # pencereleri buldukça kendisi halledecek.
     organize_windows_dynamically()
+
+
     
     print("\nOtomasyon Tamamlandı.")
+
     input("Çıkmak için Enter tuşuna basın...")
     sys.stdout.flush()

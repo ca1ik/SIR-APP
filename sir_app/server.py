@@ -40,12 +40,10 @@ def start_automation():
     if not video_path:
         return jsonify({"error": "Video yolu belirtilmedi."}), 400
 
+
+
+
     # İsteği alır almaz otomasyonu ayrı bir iş parçacığında çalıştırır.
     thread = threading.Thread(target=run_otomasyon, args=(video_path,))
     thread.start()
     return jsonify({"status": "Otomasyon başlatılıyor..."}), 200
-
-# Ana fonksiyon
-if __name__ == '__main__':
-    # Flask sunucusunu çalıştırır
-    app.run(port=5000)
