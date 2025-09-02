@@ -4,27 +4,31 @@ import time
 import pygetwindow as gw
 import sys
 import ctypes
+from ctypes.wintypes import RECT
 
-def get_screen_resolution():
-    """Ekran çözünürlüğünü alır."""
+def get_work_area():
+    """
+    Ekranın kullanılabilir çalışma alanını (görev çubuğu hariç) alır.
+    Bu, pencerelerin görev çubuğunun altına girmesini engeller ve boşlukları giderir.
+    """
     try:
-        user32 = ctypes.windll.user32
-        screen_width = user32.GetSystemMetrics(0)
-        screen_height = user32.GetSystemMetrics(1)
-        return screen_width, screen_height
+        work_area = RECT()
+        # SPI_GETWORKAREA sabiti 48'dir. Görev çubuğu hariç alanı döndürür.
+        ctypes.windll.user32.SystemParametersInfoW(48, 0, ctypes.byref(work_area), 0)
+        width = work_area.right - work_area.left
+        height = work_area.bottom - work_area.top
+        return work_area.left, work_area.top, width, height
     except Exception as e:
-        print(f"Hata: Ekran çözünürlüğü alınamadı: {e}")
-        return None, None
+        print(f"Hata: Çalışma alanı alınamadı: {e}")
+        return 0, 0, 0, 0
 
 # --- DEĞİŞTİRİLECEK ALANLAR ---
 # Lütfen bu yolların sisteminizde doğru olduğundan emin olun.
-# Yolunu bulmak için uygulamaya sağ tıklayıp "Dosya konumunu aç" seçeneğini kullanabilirsiniz.
 vs_code_path = r'C:\Users\user\AppData\Local\Programs\Microsoft VS Code\Code.exe'
 github_desktop_path = r'C:\Users\user\AppData\Local\GitHubDesktop\GithubDesktop.exe'
 chrome_path = r'C:\Program Files\Google\Chrome\Application\chrome.exe'
 
 # --- UYGULAMA BİLGİLERİ ---
-# Açılacak uygulamalar ve pencere başlıklarındaki ipuçları
 apps_to_open = [
     {'name': 'VS Code', 'path': vs_code_path, 'args': [], 'title_hints': ['Visual Studio Code']},
     {'name': 'GitHub Desktop', 'path': github_desktop_path, 'args': [], 'title_hints': ['GitHub Desktop']},
@@ -40,10 +44,8 @@ def open_applications():
     for app in apps_to_open:
         try:
             if app['name'] == 'Spotify':
-                # Spotify gibi UWP uygulamaları için 'start' komutu kullanılır
                 subprocess.Popen(f'start {app["path"]}', shell=True)
             else:
-                # Diğer uygulamalar için tam yol ve argümanlar kullanılır
                 command = [app['path']] + app['args']
                 subprocess.Popen(command)
             print(f"-> {app['name']} başlatıldı.")
@@ -52,97 +54,86 @@ def open_applications():
         except Exception as e:
             print(f"HATA: {app['name']} başlatılırken bir sorun oluştu: {e}")
 
-def organize_windows():
+def organize_windows_dynamically():
     """
-    Açık pencereleri bulur ve ekranı dört çeyreğe bölecek şekilde düzenler.
+    Pencereleri bulur ve bulduğu anda hemen yerleştirir.
+    Tüm pencerelerin açılmasını beklemez.
     """
-    print("\nPencereler düzenleniyor...")
-    screen_width, screen_height = get_screen_resolution()
+    print("\nPencereler dinamik olarak düzenleniyor...")
+    left, top, work_width, work_height = get_work_area()
 
-    if not screen_width or not screen_height:
+    if work_width == 0:
         print("Ekran bilgisi alınamadığı için pencere düzenleme atlandı.")
         return
 
-    print(f"Ekran çözünürlüğü: {screen_width}x{screen_height}")
+    print(f"Kullanılabilir Çalışma Alanı: {work_width}x{work_height} (Pozisyon: {left},{top})")
 
-    # Ekranı 4 eşit parçaya böl
-    # Pencereler arasında boşluk kalmaması ve tam oturması için
-    half_width = screen_width // 2
-    half_height = screen_height // 2
+    # Boşluk kalmaması için piksel hassasiyetinde hesaplama
+    half_width = work_width // 2
+    half_height = work_height // 2
+    right_width = work_width - half_width   # Kalan pikselleri sağ tarafa ekle
+    bottom_height = work_height - half_height # Kalan pikselleri alt tarafa ekle
 
-    # Pencere konumları: (x, y)
-    # 1 -> Sol Üst, 2 -> Sağ Üst, 3 -> Sol Alt, 4 -> Sağ Alt
-    window_positions = {
-        'Gemini':         (0, 0),
-        'VS Code':        (half_width, 0),
-        'GitHub Desktop': (0, half_height),
-        'Spotify':        (half_width, half_height),
+    # Pencere konumları ve boyutları
+    positions_and_sizes = {
+        'Gemini':         {'pos': (left, top), 'size': (half_width, half_height)},
+        'VS Code':        {'pos': (left + half_width, top), 'size': (right_width, half_height)},
+        'GitHub Desktop': {'pos': (left, top + half_height), 'size': (half_width, bottom_height)},
+        'Spotify':        {'pos': (left + half_width, top + half_height), 'size': (right_width, bottom_height)},
     }
 
-    # Pencerelerin açılmasını beklemek için döngü
-    app_windows = {}
+    arranged_windows = set()
     attempts = 0
     max_attempts = 40  # 40 saniye boyunca pencereleri ara
 
-    print("Uygulama pencereleri aranıyor...")
-    while len(app_windows) < len(apps_to_open) and attempts < max_attempts:
+    print("Uygulama pencereleri aranıyor ve anında yerleştiriliyor...")
+    while len(arranged_windows) < len(apps_to_open) and attempts < max_attempts:
         all_windows = gw.getAllWindows()
         for window in all_windows:
             if not window.visible or not window.title.strip():
                 continue
 
             for app in apps_to_open:
-                if app['name'] not in app_windows:  # Henüz bulunmamış bir pencere mi?
+                # Eğer bu uygulama henüz düzenlenmediyse kontrol et
+                if app['name'] not in arranged_windows:
                     for hint in app['title_hints']:
                         if hint.lower() in window.title.lower():
-                            print(f"-> Pencere bulundu: {app['name']} ('{window.title}')")
-                            app_windows[app['name']] = window
-                            break # İpucu bulundu, diğer ipuçlarına bakma
+                            print(f"\n-> Pencere bulundu ve düzenleniyor: {app['name']}")
+                            try:
+                                geo = positions_and_sizes[app['name']]
+                                win = window
+
+                                if win.isMinimized: win.restore()
+                                if win.isMaximized: win.restore()
+                                time.sleep(0.05) # Pencerenin durumunu güncellemesi için çok kısa bekle
+
+                                win.resizeTo(*geo['size'])
+                                win.moveTo(*geo['pos'])
+                                print(f"   '{app['name']}' penceresi {geo['pos']} konumuna taşındı, boyutu {geo['size']} olarak ayarlandı.")
+                                
+                                arranged_windows.add(app['name'])
+
+                            except Exception as e:
+                                print(f"   HATA: '{app['name']}' penceresi düzenlenirken bir sorun oluştu: {e}")
+                            
+                            break # Uygulama bulundu, diğer ipuçlarına bakma
         
         time.sleep(1)
         attempts += 1
-        print(f"Arama denemesi {attempts}/{max_attempts}... Bulunanlar: {list(app_windows.keys())}", end='\r')
-
-    print("\n") # Satır başı yap
-
-    if len(app_windows) < len(apps_to_open):
-        print(f"UYARI: Tüm uygulama pencereleri bulunamadı. Bulunan {len(app_windows)}/{len(apps_to_open)} pencere düzenlenecek.")
-
-    # Pencereleri yeniden boyutlandır ve taşı
-    for app_name, pos in window_positions.items():
-        if app_name in app_windows:
-            win = app_windows[app_name]
-            try:
-                # Pencereyi yeniden boyutlandırmadan önce normal durumuna getir
-                if win.isMinimized:
-                    win.restore()
-                if win.isMaximized:
-                    win.restore()
-                
-                time.sleep(0.1) # Pencerenin durumunu güncellemesi için kısa bir bekleme
-
-                # Pencereyi istenen boyuta ve konuma getir
-                win.resizeTo(half_width, half_height)
-                win.moveTo(pos[0], pos[1])
-                print(f"-> '{app_name}' penceresi {pos} konumuna taşındı ve boyutlandırıldı.")
-
-            except gw.PyGetWindowException as e:
-                print(f"HATA: '{app_name}' penceresi düzenlenirken bir sorun oluştu: {e}")
-        else:
-            print(f"UYARI: '{app_name}' penceresi bulunamadığı için atlandı.")
+        print(f"Arama denemesi {attempts}/{max_attempts}... Düzenlenenler: {len(arranged_windows)}/{len(apps_to_open)}", end='\r')
+    
+    print("\n")
 
 
 if __name__ == '__main__':
     print("Otomasyon Başladı...")
     open_applications()
     
-    # Uygulamaların açılmasına ve pencerelerin oluşmasına zaman tanımak için bekle
-    print("\nUygulamaların tamamen açılması için 10 saniye bekleniyor...")
-    time.sleep(10)
-    
-    organize_windows()
+    # Sabit bekleme kaldırıldı, organize_windows_dynamically fonksiyonu
+    # pencereleri buldukça kendisi halledecek.
+    organize_windows_dynamically()
     
     print("\nOtomasyon Tamamlandı.")
-    # Konsol penceresinin hemen kapanmasını engellemek için
     input("Çıkmak için Enter tuşuna basın...")
     sys.stdout.flush()
+
