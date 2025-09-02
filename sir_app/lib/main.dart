@@ -13,6 +13,7 @@ class OtomasyonApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Sistem Otomasyonu',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
         primaryColor: const Color(0xFF1E1E1E),
@@ -46,20 +47,32 @@ class OtomasyonSayfasi extends StatefulWidget {
   State<OtomasyonSayfasi> createState() => _OtomasyonSayfasiState();
 }
 
-class _OtomasyonSayfasiState extends State<OtomasyonSayfasi> {
+class _OtomasyonSayfasiState extends State<OtomasyonSayfasi>
+    with SingleTickerProviderStateMixin {
   final String _sifre = 'forfuture';
   final FocusNode _sifreFocusNode = FocusNode();
+  late AnimationController _animationController;
+  late Animation<Color?> _colorAnimation;
 
   @override
   void initState() {
     super.initState();
     RawKeyboard.instance.addListener(_handleKeyPress);
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 5),
+    )..repeat(reverse: true);
+    _colorAnimation = ColorTween(
+      begin: const Color(0xFF121212),
+      end: const Color(0xFF1E1E30),
+    ).animate(_animationController);
   }
 
   @override
   void dispose() {
     RawKeyboard.instance.removeListener(_handleKeyPress);
     _sifreFocusNode.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -204,26 +217,44 @@ class _OtomasyonSayfasiState extends State<OtomasyonSayfasi> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'Hoş Geldiniz',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+    return AnimatedBuilder(
+      animation: _animationController,
+      builder: (context, child) {
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                _colorAnimation.value!,
+                _colorAnimation.value!.withOpacity(0.5),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            const SizedBox(height: 48),
-            ElevatedButton(
-              onPressed: _showPasswordDialog,
-              child: const Text(
-                'Sistemi Başlat',
-                style: TextStyle(fontSize: 18),
+          ),
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  const Text(
+                    'Hoş Geldiniz',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 48),
+                  ElevatedButton(
+                    onPressed: _showPasswordDialog,
+                    child: const Text(
+                      'Sistemi Başlat',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
