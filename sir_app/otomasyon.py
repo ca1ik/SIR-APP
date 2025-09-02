@@ -71,15 +71,15 @@ def organize_windows_dynamically():
     # Boşluk kalmaması için piksel hassasiyetinde hesaplama
     half_width = work_width // 2
     half_height = work_height // 2
-    right_width = work_width - half_width   # Kalan pikselleri sağ tarafa ekle
+    right_width = work_width - half_width  # Kalan pikselleri sağ tarafa ekle
     bottom_height = work_height - half_height # Kalan pikselleri alt tarafa ekle
 
     # Pencere konumları ve boyutları
     positions_and_sizes = {
-        'Gemini':         {'pos': (left, top), 'size': (half_width, half_height)},
-        'VS Code':        {'pos': (left + half_width, top), 'size': (right_width, half_height)},
+        'Gemini':          {'pos': (left, top), 'size': (half_width, half_height)},
+        'VS Code':          {'pos': (left + half_width, top), 'size': (right_width, half_height)},
         'GitHub Desktop': {'pos': (left, top + half_height), 'size': (half_width, bottom_height)},
-        'Spotify':        {'pos': (left + half_width, top + half_height), 'size': (right_width, bottom_height)},
+        'Spotify':          {'pos': (left + half_width, top + half_height), 'size': (right_width, bottom_height)},
     }
 
     arranged_windows = set()
@@ -136,4 +136,3 @@ if __name__ == '__main__':
     print("\nOtomasyon Tamamlandı.")
     input("Çıkmak için Enter tuşuna basın...")
     sys.stdout.flush()
-
