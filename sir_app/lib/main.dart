@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 void main() {
@@ -47,6 +48,28 @@ class OtomasyonSayfasi extends StatefulWidget {
 
 class _OtomasyonSayfasiState extends State<OtomasyonSayfasi> {
   final String _sifre = 'forfuture';
+  final FocusNode _sifreFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    RawKeyboard.instance.addListener(_handleKeyPress);
+  }
+
+  @override
+  void dispose() {
+    RawKeyboard.instance.removeListener(_handleKeyPress);
+    _sifreFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleKeyPress(RawKeyEvent event) {
+    if (event is RawKeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.enter &&
+        !Navigator.of(context).canPop()) {
+      _showPasswordDialog();
+    }
+  }
 
   Future<void> _showPasswordDialog() async {
     final TextEditingController sifreController = TextEditingController();
@@ -58,6 +81,7 @@ class _OtomasyonSayfasiState extends State<OtomasyonSayfasi> {
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setState) {
+            FocusScope.of(context).requestFocus(_sifreFocusNode);
             return AlertDialog(
               backgroundColor: const Color(0xFF1E1E1E),
               shape: RoundedRectangleBorder(
@@ -72,8 +96,10 @@ class _OtomasyonSayfasiState extends State<OtomasyonSayfasi> {
                 child: ListBody(
                   children: <Widget>[
                     TextField(
+                      focusNode: _sifreFocusNode,
                       controller: sifreController,
                       obscureText: true,
+                      autofocus: true,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
                         filled: true,
@@ -89,7 +115,8 @@ class _OtomasyonSayfasiState extends State<OtomasyonSayfasi> {
                       ),
                       onSubmitted: (String value) async {
                         if (value == _sifre) {
-                          _sendRequestAndClose(context);
+                          await _sendRequest(context);
+                          if (mounted) Navigator.of(context).pop();
                         } else {
                           setState(() {
                             sifreHatali = true;
@@ -114,9 +141,10 @@ class _OtomasyonSayfasiState extends State<OtomasyonSayfasi> {
                   ),
                   child: const Text('Onayla',
                       style: TextStyle(color: Colors.black)),
-                  onPressed: () {
+                  onPressed: () async {
                     if (sifreController.text == _sifre) {
-                      _sendRequestAndClose(context);
+                      await _sendRequest(context);
+                      if (mounted) Navigator.of(context).pop();
                     } else {
                       setState(() {
                         sifreHatali = true;
@@ -132,44 +160,29 @@ class _OtomasyonSayfasiState extends State<OtomasyonSayfasi> {
     );
   }
 
-  Future<void> _sendRequestAndClose(BuildContext context) async {
+  Future<void> _sendRequest(BuildContext context) async {
     try {
       final response =
           await http.post(Uri.parse('http://127.0.0.1:5000/baslat'));
       if (response.statusCode == 200) {
-        _showSuccessDialog();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Otomasyon başlatıldı.',
+                style: TextStyle(color: Colors.white)),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       } else {
-        _showErrorDialog('Otomasyon başlatılırken bir hata oluştu.');
+        _showErrorDialog(context, 'Otomasyon başlatılırken bir hata oluştu.');
       }
     } catch (e) {
-      _showErrorDialog(
+      _showErrorDialog(context,
           'Sunucuya bağlanılamadı. Python sunucusunun çalıştığından emin olun.');
     }
-    // Şifre kutusunu kapat
-    Navigator.of(context).pop();
   }
 
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Başarılı'),
-          content: const Text('Otomasyon başlatıldı.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Tamam'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showErrorDialog(String message) {
+  void _showErrorDialog(BuildContext context, String message) {
     showDialog(
       context: context,
       builder: (context) {
