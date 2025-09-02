@@ -1,34 +1,37 @@
-from flask import Flask, jsonify, request
+# Flask'tan gerekli modülleri içe aktarır
+from flask import Flask, request
+# subprocess, işletim sistemi komutlarını çalıştırmak için kullanılır
 import subprocess
+# threading, arka plan görevlerini ana programı engellemeden çalıştırmak için kullanılır
 import threading
+import sys
 import os
 
 app = Flask(__name__)
 
-# Otomasyon betiğini arka planda çalıştırmak için fonksiyon
-def run_automation_script():
+# Arka planda çalışacak bir fonksiyon
+def run_otomasyon():
+    # otomasyon.py dosyasını çalıştırır.
+    # Bu komut, Flutter uygulaması ana iş parçacığını (thread) engellemeden çalışmaya devam eder.
     try:
-        # otomasyon_araci.py dosyasını çalıştır
-        print("Otomasyon betiği çalıştırılıyor...")
-        subprocess.run(['python', 'otomasyon_araci.py'], check=True)
-        print("Otomasyon betiği başarıyla tamamlandı.")
-    except subprocess.CalledProcessError as e:
-        print(f"Hata: Otomasyon betiği çalıştırılırken bir hata oluştu: {e}")
-    except FileNotFoundError:
-        print("Hata: otomasyon_araci.py dosyası bulunamadı.")
+        # Mevcut betiğin (server.py) dizinini alın
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        otomasyon_path = os.path.join(script_dir, "otomasyon.py")
+        subprocess.Popen([sys.executable, otomasyon_path])
+        print("Otomasyon betiği başlatıldı.")
     except Exception as e:
-        print(f"Bilinmeyen hata: {e}")
+        print(f"Otomasyon betiğini başlatırken hata oluştu: {e}")
 
+# '/baslat' URL'si için bir POST isteği dinler
 @app.route('/baslat', methods=['POST'])
-def baslat_otomasyon():
-    # Otomasyonu ayrı bir iş parçacığında (thread) başlat
-    # Bu, uygulamanın hemen yanıt vermesini sağlar ve Flutter uygulamasının donmasını engeller.
-    thread = threading.Thread(target=run_automation_script)
+def baslat():
+    # İsteği alır almaz otomasyonu ayrı bir iş parçacığında çalıştırır.
+    # Böylece Flutter uygulaması donmaz.
+    thread = threading.Thread(target=run_otomasyon)
     thread.start()
+    return "Otomasyon başlatılıyor...", 200
 
-    return jsonify({"durum": "başlatıldı", "mesaj": "Otomasyon arka planda çalıştırılıyor."})
-
+# Ana fonksiyon
 if __name__ == '__main__':
-    # Geliştirme için kullanılan host ve port
-    # production ortamında 0.0.0.0 kullanılması gerekir.
-    app.run(host='127.0.0.1', port=5000)
+    # Flask sunucusunu çalıştırır
+    app.run(port=5000)
