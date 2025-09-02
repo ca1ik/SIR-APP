@@ -43,8 +43,15 @@ def organize_windows():
     Finds open windows and arranges them in a four-quadrant grid.
     """
     try:
-        screen_width = gw.get_monitors()[0].width
-        screen_height = gw.get_monitors()[0].height
+        monitors = gw.get_monitors()
+        if not monitors:
+            print("No monitors found. Window arrangement skipped.")
+            return
+
+        main_monitor = monitors[0]
+        screen_width = main_monitor.width
+        screen_height = main_monitor.height
+
     except IndexError:
         print("Screen info could not be obtained. Window arrangement skipped.")
         return
@@ -55,16 +62,16 @@ def organize_windows():
 
     # Define window positions based on the desired layout
     window_positions = {
-        'Gemini': (0, 0, quarter_width, quarter_height),           # Top-Left
-        'VS Code': (quarter_width, 0, quarter_width, quarter_height),     # Top-Right
-        'GitHub Desktop': (0, quarter_height, quarter_width, quarter_height), # Bottom-Left
-        'Spotify': (quarter_width, quarter_height, quarter_width, quarter_height), # Bottom-Right
+        'Gemini': (0, 0),                       # Top-Left
+        'VS Code': (quarter_width, 0),          # Top-Right
+        'GitHub Desktop': (0, quarter_height),  # Bottom-Left
+        'Spotify': (quarter_width, quarter_height), # Bottom-Right
     }
 
     # Wait for the windows to be available
     app_windows = {}
     attempts = 0
-    max_attempts = 30 # Artırılmış deneme sayısı
+    max_attempts = 40 
 
     while len(app_windows) < 4 and attempts < max_attempts:
         open_windows = gw.getAllWindows()
@@ -76,7 +83,6 @@ def organize_windows():
                     for hint in app['title_hints']:
                         if hint.lower() in window.title.lower():
                             app_windows[app['name']] = window
-                            print(f"Window found for '{app['name']}': {window.title}")
                             break
         time.sleep(1) # Wait for windows to load completely
         attempts += 1
@@ -89,10 +95,14 @@ def organize_windows():
         if app_name in app_windows:
             win = app_windows[app_name]
             try:
-                win.maximize() # Pencerenin boyutlarını sıfırlamak için tam ekran yapın
-                time.sleep(0.5)
-                win.restore()  # Eski boyutlarına dönün
-                win.resizeTo(pos[2], pos[3])
+                # Ensure window is visible and not minimized before resizing
+                if win.isMinimized:
+                    win.restore()
+                # Make sure the window is not maximized
+                if win.isMaximized:
+                    win.restore()
+                
+                win.resizeTo(quarter_width, quarter_height)
                 win.moveTo(pos[0], pos[1])
             except gw.PyGetWindowException as e:
                 print(f"Error arranging window '{app_name}': {e}")
@@ -102,7 +112,7 @@ def organize_windows():
 if __name__ == '__main__':
     print("Automation started...")
     open_applications()
-    time.sleep(10)  # Uygulamaların tamamen açılması için bekleme
+    time.sleep(15)  # Uygulamaların tamamen açılması için bekleme
     organize_windows()
     print("Automation completed.")
     sys.stdout.flush()
