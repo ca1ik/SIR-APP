@@ -713,6 +713,11 @@ class _VideoChatSayfasiState extends State<VideoChatSayfasi> {
           });
         });
       } else {
+        _showErrorDialog(AppTexts.get(widget.lang, 'error'));
+      }
+    } catch (e) {
+      _showErrorDialog(AppTexts.get(widget.lang, 'error'));
+    }
   }
 
         content: Text(message),
