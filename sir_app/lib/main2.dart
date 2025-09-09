@@ -700,6 +700,9 @@ class _VideoChatSayfasiState extends State<VideoChatSayfasi> {
   Future<void> _sendAutomationRequest() async {
     try {
       final response = await http.post(
+        Uri.parse('http://127.0.0.1:5000/start_automation'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'video_path': 'assets/test.mp4'}),
   }
 
         content: Text(message),
