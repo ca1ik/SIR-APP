@@ -703,6 +703,13 @@ class _VideoChatSayfasiState extends State<VideoChatSayfasi> {
         Uri.parse('http://127.0.0.1:5000/start_automation'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'video_path': 'assets/test.mp4'}),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _messages.add({
+            'sender': 'system',
+            'text': AppTexts.get(widget.lang, 'automationStarted')
   }
 
         content: Text(message),
