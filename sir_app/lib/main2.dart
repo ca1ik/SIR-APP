@@ -693,6 +693,13 @@ class _VideoChatSayfasiState extends State<VideoChatSayfasi> {
     if (message.isEmpty) return;
 
     setState(() {
+      _messages.add({'sender': 'user', 'text': message});
+    });
+
+    if (message.toLowerCase() ==
+        AppTexts.get(widget.lang, 'wakeCommand').toLowerCase()) {
+      await _sendAutomationRequest();
+    }
 
     _chatController.clear();
   }
