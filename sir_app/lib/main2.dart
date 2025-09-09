@@ -731,6 +731,7 @@ class _VideoChatSayfasiState extends State<VideoChatSayfasi> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
+        title: Text(widget.lang == 'tr' ? 'Hata' : 'Error'),
         content: Text(message),
         actions: [
           TextButton(
