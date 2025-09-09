@@ -710,6 +710,8 @@ class _VideoChatSayfasiState extends State<VideoChatSayfasi> {
           _messages.add({
             'sender': 'system',
             'text': AppTexts.get(widget.lang, 'automationStarted')
+          });
+        });
   }
 
         content: Text(message),
