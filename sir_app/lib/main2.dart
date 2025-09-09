@@ -712,6 +712,7 @@ class _VideoChatSayfasiState extends State<VideoChatSayfasi> {
             'text': AppTexts.get(widget.lang, 'automationStarted')
           });
         });
+      } else {
   }
 
         content: Text(message),
