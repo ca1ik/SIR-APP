@@ -727,6 +727,9 @@ class _VideoChatSayfasiState extends State<VideoChatSayfasi> {
     }
   }
 
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
         content: Text(message),
         actions: [
           TextButton(
