@@ -3,6 +3,9 @@ import 'package:logger/logger.dart';
 
 // Logger örneği
 
+//dependencies:
+//  logger: ^2.4.0
+
 var logger = Logger();
 
 void main() {
