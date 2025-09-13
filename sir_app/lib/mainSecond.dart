@@ -44,6 +44,7 @@ final Logger logger = Logger(
   printer: PrettyPrinter(
     colors: false,
     printEmojis: true,
+    printTime: true,
   ),
 );
 
