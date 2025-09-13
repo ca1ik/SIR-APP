@@ -42,6 +42,8 @@ class LogEntry {
 /// Global logger
 final Logger logger = Logger(
   printer: PrettyPrinter(
+    colors: false,
+    printEmojis: true,
   ),
 );
 
