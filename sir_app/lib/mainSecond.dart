@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
+import 'package:flutter/services.dart';
 
 void main() {
   runApp(const LogApp());
