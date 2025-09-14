@@ -112,6 +112,7 @@ class _LogHomePageState extends State<LogHomePage> {
     }
     setState(() {
       _scrollToBottom();
+    });
   }
 
   void _clearLogs() {
