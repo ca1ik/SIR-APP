@@ -91,6 +91,11 @@ class _LogHomePageState extends State<LogHomePage> {
   LogLevel? filter;
   String searchQuery = "";
   final logStorage = LogStorage();
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   void _addRandomLogs() {
     logStorage.add(LogLevel.debug, "Debug log example");
