@@ -173,6 +173,8 @@ class _LogHomePageState extends State<LogHomePage> {
             child: SelectableText(
               "${_dateFormat.format(entry.timestamp)} ${_timeFormat.format(entry.timestamp)}\n\n"
               "Message: ${entry.message}\n\n"
+              "${entry.stackTrace != null ? "Stack Trace:\n${entry.stackTrace}" : ""}",
+              style: const TextStyle(fontSize: 14),
             ),
           ),
           actions: [
