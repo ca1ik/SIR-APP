@@ -91,6 +91,9 @@ class _LogHomePageState extends State<LogHomePage> {
   LogLevel? filter;
   String searchQuery = "";
   final logStorage = LogStorage();
+  final ScrollController _scrollController = ScrollController();
+  final DateFormat _timeFormat = DateFormat('HH:mm:ss');
+  final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
   @override
   void dispose() {
     _scrollController.dispose();
