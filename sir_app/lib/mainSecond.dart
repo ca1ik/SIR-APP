@@ -110,6 +110,8 @@ class _LogHomePageState extends State<LogHomePage> {
     } catch (e, s) {
       logStorage.add(LogLevel.error, "An unexpected error occurred", e, s);
     }
+    setState(() {
+      _scrollToBottom();
   }
 
   void _clearLogs() {
