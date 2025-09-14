@@ -133,6 +133,7 @@ class _LogHomePageState extends State<LogHomePage> {
   IconData _iconForLevel(LogLevel level) {
     switch (level) {
       case LogLevel.debug:
+        return Icons.bug_report_outlined;
       case LogLevel.info:
       case LogLevel.warning:
       case LogLevel.error:
