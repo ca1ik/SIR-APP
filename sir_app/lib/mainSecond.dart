@@ -109,6 +109,7 @@ class _LogHomePageState extends State<LogHomePage> {
       throw Exception("This is a test error message");
     } catch (e, s) {
       logStorage.add(LogLevel.error, "An unexpected error occurred", e, s);
+    }
   }
 
   void _clearLogs() {
