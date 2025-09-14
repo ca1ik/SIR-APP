@@ -139,6 +139,7 @@ class _LogHomePageState extends State<LogHomePage> {
       case LogLevel.warning:
         return Icons.warning_amber_outlined;
       case LogLevel.error:
+        return Icons.error_outline;
     }
   }
 
