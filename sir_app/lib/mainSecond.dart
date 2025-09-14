@@ -170,6 +170,9 @@ class _LogHomePageState extends State<LogHomePage> {
             ],
           ),
           content: SingleChildScrollView(
+            child: SelectableText(
+              "${_dateFormat.format(entry.timestamp)} ${_timeFormat.format(entry.timestamp)}\n\n"
+              "Message: ${entry.message}\n\n"
             ),
           ),
           actions: [
