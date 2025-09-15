@@ -66,6 +66,7 @@ class LogStorage extends ValueNotifier<List<LogEntry>> {
 
   LogStorage._internal() : super([]);
 
+  List<LogEntry> get logs => value;
 
   void add(LogLevel level, String msg,
       [dynamic error, StackTrace? stackTrace]) {
