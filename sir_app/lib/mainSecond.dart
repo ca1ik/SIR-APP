@@ -38,6 +38,7 @@ class LogEntry {
   final String message;
   final DateTime timestamp;
   final String? stackTrace;
+  final dynamic error;
 
   LogEntry({
     required this.level,
