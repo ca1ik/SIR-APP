@@ -59,6 +59,7 @@ final Logger logger = Logger(
 );
 
 /// Log saklayıcı singleton
+class LogStorage extends ValueNotifier<List<LogEntry>> {
   static final LogStorage _instance = LogStorage._internal();
   factory LogStorage() => _instance;
 
