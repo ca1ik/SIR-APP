@@ -45,6 +45,7 @@ class LogEntry {
     required this.message,
     required this.timestamp,
     this.stackTrace,
+    this.error,
   });
 }
 
