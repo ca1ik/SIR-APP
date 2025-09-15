@@ -57,26 +57,26 @@ final Logger logger = Logger(
 );
 
 /// Log saklayıcı singleton
-class LogStorage {
   static final LogStorage _instance = LogStorage._internal();
   factory LogStorage() => _instance;
-  LogStorage._internal();
 
-  final List<LogEntry> _logs = [];
 
-  List<LogEntry> get logs => List.unmodifiable(_logs);
 
   void add(LogLevel level, String msg,
       [dynamic error, StackTrace? stackTrace]) {
-    _logs.add(LogEntry(
-      level: level,
-      message: msg,
-      timestamp: DateTime.now(),
-      stackTrace: stackTrace?.toString(),
-    ));
+    value = List.from(value)
+      ..add(LogEntry(
+        level: level,
+        message: msg,
+        timestamp: DateTime.now(),
+        stackTrace: stackTrace?.toString(),
+        error: error,
+      ));
   }
 
-  void clear() => _logs.clear();
+  void clear() {
+    value = [];
+  }
 }
 
 /// Ana sayfa
@@ -96,7 +96,14 @@ class _LogHomePageState extends State<LogHomePage> {
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
 
   @override
+  void initState() {
+    super.initState();
+    logStorage.addListener(_scrollToBottom);
+  }
+
+  @override
   void dispose() {
+    logStorage.removeListener(_scrollToBottom);
     _scrollController.dispose();
     super.dispose();
   }
@@ -110,14 +117,10 @@ class _LogHomePageState extends State<LogHomePage> {
     } catch (e, s) {
       logStorage.add(LogLevel.error, "An unexpected error occurred", e, s);
     }
-    setState(() {
-      _scrollToBottom();
-    });
   }
 
   void _clearLogs() {
     logStorage.clear();
-    setState(() {});
   }
 
   void _scrollToBottom() {
@@ -131,16 +134,14 @@ class _LogHomePageState extends State<LogHomePage> {
   }
 
   List<LogEntry> _filteredLogs() {
-    return logStorage.logs
-        .where((log) {
-          final matchesFilter = filter == null || log.level == filter;
-          final matchesSearch = searchQuery.isEmpty ||
-              log.message.toLowerCase().contains(searchQuery.toLowerCase());
-          return matchesFilter && matchesSearch;
-        })
-        .toList()
-        .reversed
-        .toList();
+    final logs = logStorage.logs.where((log) {
+      final matchesFilter = filter == null || log.level == filter;
+      final matchesSearch = searchQuery.isEmpty ||
+          log.message.toLowerCase().contains(searchQuery.toLowerCase());
+      return matchesFilter && matchesSearch;
+    }).toList();
+
+    return logs.reversed.toList();
   }
 
   IconData _iconForLevel(LogLevel level) {
@@ -183,11 +184,31 @@ class _LogHomePageState extends State<LogHomePage> {
             ],
           ),
           content: SingleChildScrollView(
-            child: SelectableText(
-              "${_dateFormat.format(entry.timestamp)} ${_timeFormat.format(entry.timestamp)}\n\n"
-              "Message: ${entry.message}\n\n"
-              "${entry.stackTrace != null ? "Stack Trace:\n${entry.stackTrace}" : ""}",
-              style: const TextStyle(fontSize: 14),
+            child: SelectableText.rich(
+              TextSpan(
+                style: const TextStyle(fontSize: 14),
+                children: <TextSpan>[
+                  TextSpan(
+                      text:
+                          '${_dateFormat.format(entry.timestamp)} ${_timeFormat.format(entry.timestamp)}\n\n'),
+                  const TextSpan(
+                      text: "Message: ",
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  TextSpan(text: "${entry.message}\n"),
+                  if (entry.error != null) ...[
+                    const TextSpan(
+                        text: "\nError: ",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    TextSpan(text: "${entry.error}\n"),
+                  ],
+                  if (entry.stackTrace != null) ...[
+                    const TextSpan(
+                        text: "\nStack Trace:\n",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    TextSpan(text: entry.stackTrace),
+                  ],
+                ],
+              ),
             ),
           ),
           actions: [
@@ -197,6 +218,7 @@ class _LogHomePageState extends State<LogHomePage> {
                     text:
                         "${_dateFormat.format(entry.timestamp)} ${_timeFormat.format(entry.timestamp)}\n"
                         "Message: ${entry.message}\n"
+                        "${entry.error != null ? "Error: ${entry.error}\n" : ""}"
                         "${entry.stackTrace != null ? "Stack Trace:\n${entry.stackTrace}" : ""}"));
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -246,8 +268,6 @@ class _LogHomePageState extends State<LogHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final logs = _filteredLogs();
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("Advanced Log Viewer"),
@@ -264,22 +284,32 @@ class _LogHomePageState extends State<LogHomePage> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          _buildFilterRow(),
-          _buildSearchBar(),
-          Expanded(
-            child: logs.isEmpty
-                ? const Center(
-                    child: Text("No logs to display",
-                        style: TextStyle(color: Colors.grey)))
-                : ListView.builder(
-                    controller: _scrollController,
-                    itemCount: logs.length,
-                    itemBuilder: (context, index) => _buildLogTile(logs[index]),
-                  ),
-          ),
-        ],
+      body: ValueListenableBuilder<List<LogEntry>>(
+        valueListenable: logStorage,
+        builder: (context, allLogs, child) {
+          final logs = _filteredLogs();
+          return Column(
+            children: [
+              _buildFilterRow(),
+              _buildSearchBar(),
+              Expanded(
+                child: logs.isEmpty
+                    ? Center(
+                        child: Text(
+                            logStorage.logs.isEmpty
+                                ? "No logs to display"
+                                : "No logs matching your search and filter criteria",
+                            style: const TextStyle(color: Colors.grey)))
+                    : ListView.builder(
+                        controller: _scrollController,
+                        itemCount: logs.length,
+                        itemBuilder: (context, index) =>
+                            _buildLogTile(logs[index]),
+                      ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
