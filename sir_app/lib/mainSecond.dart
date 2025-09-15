@@ -64,6 +64,7 @@ class LogStorage extends ValueNotifier<List<LogEntry>> {
 
   factory LogStorage() => _instance;
 
+  LogStorage._internal() : super([]);
 
 
   void add(LogLevel level, String msg,
