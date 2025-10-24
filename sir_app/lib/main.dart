@@ -415,7 +415,7 @@ class _VideoChatSayfasiState extends State<VideoChatSayfasi> {
                           filled: true,
                           fillColor: Colors.grey.withOpacity(0.2),
                           hintText: widget.lang == 'tr'
-                              ? 'Komutunuzu girin...'
+                              ? 'Komutunuzu girin..'
                               : 'Enter your command...',
                           hintStyle:
                               TextStyle(color: Colors.grey.withOpacity(0.6)),
