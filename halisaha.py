@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
 
+class FutbolSahasiUygulamasi:
+
         # Arka plan resmi yükleme
         self.saha_image_path = "halisaha.jpg"
         try:
